@@ -1,0 +1,12 @@
+{
+  "name": "voice-execution-os",
+  "version": "0.2.1",
+  "private": true,
+  "description": "Voice OS cloud deploy package for Netlify Functions.",
+  "scripts": {
+    "check": "node --check app.js && node --check netlify/functions/transcribe.js && node --check netlify/functions/health.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

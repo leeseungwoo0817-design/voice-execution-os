@@ -1,0 +1,225 @@
+﻿<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Voice Execution OS</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">V</div>
+          <div>
+            <strong>Voice OS</strong>
+            <span>생각을 실행으로</span>
+          </div>
+        </div>
+
+        <nav class="nav-tabs" aria-label="화면 이동">
+          <button class="nav-tab active" data-view="today">오늘</button>
+          <button class="nav-tab" data-view="command">실행센터</button>
+          <button class="nav-tab" data-view="calendar">캘린더</button>
+          <button class="nav-tab" data-view="inbox">기록함</button>
+          <button class="nav-tab" data-view="projects">프로젝트</button>
+          <button class="nav-tab" data-view="planner">실행대기</button>
+          <button class="nav-tab" data-view="backup">백업</button>
+        </nav>
+
+        <div class="side-card">
+          <span>오늘의 핵심</span>
+          <strong id="sideSummary">기록 0개 · 대기 0개</strong>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="todayLabel">오늘</p>
+            <h1>말하면 실행 대기열로 정리됩니다</h1>
+          </div>
+          <div class="export-control">
+            <select id="promptMode" aria-label="지시문 대상">
+              <option value="all">전체 대기열</option>
+              <option value="codex">Codex 실행 지시</option>
+              <option value="gpt">GPT 정리 요청</option>
+              <option value="calendar">캘린더 일정화</option>
+              <option value="daily">일일 요약</option>
+              <option value="archive">아이디어 보관</option>
+            </select>
+            <button class="ghost-button" id="exportButton">AI 실행 패킷</button>
+            <small>모바일에서 쌓아둔 내용을 Codex·GPT·캘린더별 실행 대기열로 묶습니다.</small>
+          </div>
+        </header>
+
+        <section class="capture-panel">
+          <div class="record-area">
+            <button class="record-button" id="recordButton" type="button">
+              <span class="record-dot" aria-hidden="true"></span>
+              <span id="recordButtonText">녹음 시작</span>
+            </button>
+            <p id="recordStatus">대기 중</p>
+            <strong id="recordTimer">00:00</strong>
+          </div>
+
+          <div class="draft-area">
+            <label for="manualInput">지금 떠오른 생각 / 지시 / 일정</label>
+            <textarea id="manualInput" placeholder="예: 코덱스에게 모바일 화면 메뉴를 더 쉽게 고치라고 지시 / 아이디어: 녹음 기록을 프로젝트별로 자동 묶기 / 일정: 다음 주 월요일 오전 앱 점검"></textarea>
+            <div class="draft-controls">
+              <select id="projectSelect" aria-label="프로젝트 선택"></select>
+              <select id="targetSelect" aria-label="보낼 곳 선택">
+                <option value="auto">자동 분류</option>
+                <option value="codex">Codex에게 실행 지시</option>
+                <option value="gpt">GPT에게 정리 요청</option>
+                <option value="calendar">캘린더에 일정화</option>
+                <option value="daily">일일 요약</option>
+                <option value="archive">아이디어 보관</option>
+              </select>
+              <select id="noteTypeSelect" aria-label="기록 유형 선택">
+                <option value="auto">자동 유형</option>
+                <option value="idea">아이디어 메모</option>
+                <option value="memo">일반 메모</option>
+                <option value="instruction">작업 지시</option>
+                <option value="task">할 일</option>
+                <option value="schedule">일정 후보</option>
+              </select>
+              <button class="primary-button" id="saveNoteButton">기록 저장</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="stats-grid">
+          <article class="stat-card">
+            <span>오늘 기록</span>
+            <strong id="todayCount">0</strong>
+          </article>
+          <article class="stat-card">
+            <span>실행 대기</span>
+            <strong id="pendingCount">0</strong>
+          </article>
+          <article class="stat-card">
+            <span>오늘 마무리</span>
+            <strong id="finishTodayCount">0</strong>
+          </article>
+          <article class="stat-card">
+            <span>프로젝트</span>
+            <strong id="projectCount">0</strong>
+          </article>
+          <article class="stat-card">
+            <span>일정 후보</span>
+            <strong id="scheduleCount">0</strong>
+          </article>
+        </section>
+
+        <section class="view-section" id="view-command">
+          <div class="section-heading">
+            <div>
+              <h2>실행관리센터</h2>
+              <p class="section-note">새로운 일보다 오늘 닫을 일을 먼저 확인합니다.</p>
+            </div>
+            <button class="ghost-button" id="commandPacketButton">오늘 실행 패킷</button>
+          </div>
+
+          <div class="focus-panel">
+            <span>오늘 먼저 끝낼 일</span>
+            <strong id="commandFocusTitle">아직 지정된 일이 없습니다.</strong>
+            <p id="commandFocusText">기록 카드에서 오늘마무리를 누르면 이곳에 올라옵니다.</p>
+          </div>
+
+          <div class="command-board" id="commandBoard"></div>
+        </section>
+
+        <section class="view-section active" id="view-today">
+          <div class="section-heading">
+            <h2>오늘 타임라인</h2>
+            <input id="dateFilter" type="date" />
+          </div>
+          <div class="note-list" id="todayTimeline"></div>
+        </section>
+
+        <section class="view-section" id="view-calendar">
+          <div class="section-heading">
+            <button class="ghost-button" id="prevMonth">이전</button>
+            <h2 id="monthLabel">캘린더</h2>
+            <button class="ghost-button" id="nextMonth">다음</button>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+          <h3 id="selectedDayTitle">선택한 날짜 기록</h3>
+          <div class="note-list" id="selectedDayNotes"></div>
+        </section>
+
+        <section class="view-section" id="view-inbox">
+          <div class="section-heading">
+            <h2>전체 기록함</h2>
+            <div class="filter-row">
+              <select id="typeFilter">
+                <option value="all">전체 유형</option>
+                <option value="idea">아이디어</option>
+                <option value="memo">메모</option>
+                <option value="instruction">지시</option>
+                <option value="task">할 일</option>
+                <option value="schedule">일정</option>
+              </select>
+              <select id="targetFilter">
+                <option value="all">전체 목적지</option>
+                <option value="codex">Codex</option>
+                <option value="gpt">GPT</option>
+                <option value="calendar">일정</option>
+                <option value="daily">일일요약</option>
+                <option value="archive">아이디어</option>
+              </select>
+            </div>
+          </div>
+          <div class="note-list" id="inboxList"></div>
+        </section>
+
+        <section class="view-section" id="view-projects">
+          <div class="section-heading">
+            <h2>프로젝트</h2>
+            <div class="filter-row">
+              <input id="newProjectName" type="text" placeholder="새 프로젝트명" />
+              <button class="primary-button" id="addProjectButton">추가</button>
+            </div>
+          </div>
+          <div class="project-grid" id="projectGrid"></div>
+        </section>
+
+        <section class="view-section" id="view-planner">
+          <div class="section-heading">
+            <h2>실행 대기열</h2>
+            <button class="ghost-button" id="clearCompletedButton">완료 숨기기</button>
+          </div>
+          <div class="task-board" id="taskBoard"></div>
+        </section>
+
+        <section class="view-section" id="view-backup">
+          <div class="section-heading">
+            <h2>백업</h2>
+          </div>
+          <div class="backup-card">
+            <p>기록은 이 브라우저 안에 저장됩니다. 휴대폰을 바꾸거나 브라우저 데이터를 지우기 전에는 백업을 내려받아 주세요.</p>
+            <button class="primary-button" id="downloadJsonButton">JSON 백업 다운로드</button>
+            <button class="ghost-button" id="downloadTextButton">텍스트 요약 다운로드</button>
+            <button class="ghost-button" id="restoreBackupButton">JSON 백업 불러오기</button>
+            <input id="restoreBackupInput" type="file" accept="application/json" hidden />
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="promptDialog">
+      <div class="dialog-card">
+        <div class="section-heading">
+          <h2>AI 전달용 지시문</h2>
+          <button class="ghost-button" id="closePromptButton">닫기</button>
+        </div>
+        <textarea id="promptOutput" readonly></textarea>
+        <button class="primary-button" id="copyPromptButton">지시문 복사</button>
+      </div>
+    </dialog>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
+
