@@ -245,16 +245,20 @@ async function saveAudioNote(blob) {
 
   const audioUrl = await blobToDataUrl(blob);
   let transcript = "";
+  let transcriptError = "";
 
   try {
     transcript = await transcribeAudio(audioUrl);
   } catch (error) {
+    transcriptError = error?.message || "알 수 없는 오류";
     console.warn(error);
   }
 
   const text = transcript?.trim() || "음성 메모가 저장되었습니다. 재생해서 내용을 확인하세요.";
   addNote({ text, audioUrl });
-  els.recordStatus.textContent = transcript ? "음성 기록이 실행 대기열에 저장되었습니다." : "음성은 저장됐지만 텍스트 변환은 실패했습니다.";
+  els.recordStatus.textContent = transcript
+    ? "음성 기록이 실행 대기열에 저장되었습니다."
+    : `음성은 저장됐지만 텍스트 변환은 실패했습니다. ${transcriptError}`;
 }
 
 async function transcribeAudio(audioDataUrl) {
@@ -264,11 +268,12 @@ async function transcribeAudio(audioDataUrl) {
     body: JSON.stringify({ audioDataUrl }),
   });
 
+  const data = await response.json().catch(() => ({}));
+
   if (!response.ok) {
-    throw new Error(`transcribe failed: ${response.status}`);
+    throw new Error(data.error || `transcribe failed: ${response.status}`);
   }
 
-  const data = await response.json();
   return data.text || "";
 }
 

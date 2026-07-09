@@ -29,12 +29,12 @@ exports.handler = async (event) => {
   }
 
   const audioDataUrl = String(body.audioDataUrl || "");
-  const match = audioDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  const match = audioDataUrl.match(/^data:([^,]+);base64,(.+)$/);
   if (!match) {
     return json(400, { error: "음성 파일 형식이 올바르지 않습니다." });
   }
 
-  const mimeType = match[1];
+  const mimeType = match[1].split(";")[0] || "audio/webm";
   const audioBuffer = Buffer.from(match[2], "base64");
   if (!audioBuffer.length) {
     return json(400, { error: "음성 파일이 비어 있습니다." });
