@@ -485,7 +485,7 @@ function renderCommandCenter() {
   }
 
   els.commandBoard.innerHTML = statusOrder.map((status) => {
-    const notes = state.notes.filter((note) => note.status === status);
+    const notes = sortExecutionNotes(state.notes.filter((note) => note.status === status));
     return `
       <section class="command-column status-${status}">
         <div class="command-column-head">
@@ -500,6 +500,21 @@ function renderCommandCenter() {
   bindNoteActions(els.commandBoard);
 }
 
+function sortExecutionNotes(notes) {
+  const statusRank = {
+    today: 0,
+    progress: 1,
+    pending: 2,
+    hold: 3,
+    done: 4,
+  };
+
+  return [...notes].sort((a, b) => {
+    const statusDiff = (statusRank[a.status] ?? 9) - (statusRank[b.status] ?? 9);
+    if (statusDiff) return statusDiff;
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  });
+}
 function renderNoteCard(note) {
   const project = state.projects.find((item) => item.id === note.projectId);
   const time = new Intl.DateTimeFormat("ko-KR", {
@@ -521,6 +536,7 @@ function renderNoteCard(note) {
       <div class="card-actions">
         <button type="button" data-action="today">오늘마무리</button>
         <button type="button" data-action="progress">진행중</button>
+        <button type="button" data-action="pending">대기</button>
         <button type="button" data-action="done">완료</button>
         <button type="button" data-action="hold">보류</button>
         <button type="button" data-action="prompt">지시문</button>
@@ -562,18 +578,23 @@ function getPromptNotes(target) {
 }
 
 function getCommandCenterNotes() {
-  return state.notes.filter((note) => ["today", "progress", "pending"].includes(note.status));
+  return sortExecutionNotes(state.notes.filter((note) => ["today", "progress", "pending"].includes(note.status)));
 }
 
 function buildPrompt(target, notes) {
   const title = target === "all" ? "Voice OS 실행 대기열" : targetLabels[target] || "Voice OS 지시문";
-  const grouped = groupBy(notes, (note) => note.target);
+  const sortedNotes = sortExecutionNotes(notes);
+  const grouped = groupBy(sortedNotes, (note) => note.target);
+  const statusSummary = statusOrder
+    .map((status) => `${statusLabels[status] || status}: ${sortedNotes.filter((note) => note.status === status).length}개`)
+    .join(" / ");
 
   const lines = [
     `[${title}]`,
     "",
-    "아래 내용은 모바일 Voice OS에서 수집된 실행 대기 항목입니다.",
-    "날짜, 프로젝트, 유형을 기준으로 정리하고 필요한 작업을 진행해 주세요.",
+    "아래 내용은 모바일 Voice OS에서 수집한 실행 대기 항목입니다.",
+    "오늘마무리 → 진행중 → 대기 → 보류 순서로 우선순위를 판단하고, 필요한 작업을 실행 가능한 단위로 정리해 주세요.",
+    `상태 요약: ${statusSummary}`,
     "",
   ];
 
@@ -594,13 +615,12 @@ function buildPrompt(target, notes) {
     });
   });
 
-  if (!notes.length) {
+  if (!sortedNotes.length) {
     lines.push("현재 전달할 대기 항목이 없습니다.");
   }
 
   return lines.join("\n");
 }
-
 async function copyPrompt() {
   await navigator.clipboard.writeText(els.promptOutput.value);
   els.copyPromptButton.textContent = "복사 완료";
