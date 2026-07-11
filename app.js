@@ -582,7 +582,7 @@ function getCommandCenterNotes() {
 }
 
 function buildPrompt(target, notes) {
-  const title = target === "all" ? "Voice OS 실행 대기열" : targetLabels[target] || "Voice OS 지시문";
+  const title = target === "all" ? "Voice OS 전체 실행 지시문" : `${targetLabels[target] || "Voice OS"} 지시문`;
   const sortedNotes = sortExecutionNotes(notes);
   const grouped = groupBy(sortedNotes, (note) => note.target);
   const statusSummary = statusOrder
@@ -593,6 +593,7 @@ function buildPrompt(target, notes) {
     `[${title}]`,
     "",
     "아래 내용은 모바일 Voice OS에서 수집한 실행 대기 항목입니다.",
+    "이 내용을 복사해 코덱스, GPT, 관리실장에게 붙여넣으면 됩니다.",
     "오늘마무리 → 진행중 → 대기 → 보류 순서로 우선순위를 판단하고, 필요한 작업을 실행 가능한 단위로 정리해 주세요.",
     `상태 요약: ${statusSummary}`,
     "",
@@ -616,7 +617,7 @@ function buildPrompt(target, notes) {
   });
 
   if (!sortedNotes.length) {
-    lines.push("현재 전달할 대기 항목이 없습니다.");
+    lines.push("아직 보낼 항목이 없습니다. 먼저 녹음하거나 기록을 저장한 뒤 다시 지시문을 만들어 주세요.");
   }
 
   return lines.join("\n");
@@ -987,3 +988,4 @@ function groupBy(items, getter) {
 function renderEmpty(message) {
   return `<div class="empty-state">${message}</div>`;
 }
+

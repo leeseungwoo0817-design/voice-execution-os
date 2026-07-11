@@ -48,8 +48,8 @@
               <option value="daily">일일 요약</option>
               <option value="archive">아이디어 보관</option>
             </select>
-            <button class="ghost-button" id="exportButton">AI 실행 패킷</button>
-            <small>모바일에서 쌓아둔 내용을 Codex·GPT·캘린더별 실행 대기열로 묶습니다.</small>
+            <button class="ghost-button" id="exportButton">지시문 만들기</button>
+            <small>쌓아둔 기록을 코덱스/GPT에 붙여넣을 지시문으로 만듭니다.</small>
           </div>
         </header>
 
@@ -211,9 +211,10 @@
     <dialog id="promptDialog">
       <div class="dialog-card">
         <div class="section-heading">
-          <h2>AI 전달용 지시문</h2>
+          <h2>코덱스/GPT에게 보낼 지시문</h2>
           <button class="ghost-button" id="closePromptButton">닫기</button>
         </div>
+        <p class="dialog-help">아래 내용을 복사해서 코덱스, GPT, 관리실장에게 붙여넣으면 됩니다.</p>
         <textarea id="promptOutput" readonly></textarea>
         <button class="primary-button" id="copyPromptButton">지시문 복사</button>
       </div>

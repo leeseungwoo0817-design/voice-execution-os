@@ -729,6 +729,13 @@ dialog {
   padding: 18px;
 }
 
+.dialog-help {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
 #promptOutput {
   min-height: 360px;
 }
