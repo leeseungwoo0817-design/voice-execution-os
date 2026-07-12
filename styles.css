@@ -956,6 +956,16 @@ dialog {
   padding: 24px;
 }
 
+.backup-reminder {
+  background: #fff7df;
+  border: 1px solid #f5d487;
+  border-radius: 14px;
+  color: #725000;
+  font-weight: 700;
+  margin: 14px 0;
+  padding: 14px 16px;
+}
+
 .text-backup-preview {
   background: #0f2238;
   border-radius: 14px;

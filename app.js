@@ -1,5 +1,7 @@
 const STORAGE_KEY = "voice-execution-os:v2";
 const STABLE_STORAGE_KEY = "voice-execution-os:latest";
+const BACKUP_REMINDER_KEY = "voice-execution-os:last-backup-reminder";
+const BACKUP_REMINDER_INTERVAL = 10;
 const LEGACY_STORAGE_KEYS = [
   "voice-execution-os:v1",
   "voice-execution-os",
@@ -100,6 +102,7 @@ const els = {
   downloadTextButton: $("downloadTextButton"),
   restoreBackupButton: $("restoreBackupButton"),
   restoreBackupInput: $("restoreBackupInput"),
+  backupReminder: $("backupReminder"),
   promptDialog: $("promptDialog"),
   promptOutput: $("promptOutput"),
   copyPromptButton: $("copyPromptButton"),
@@ -352,6 +355,7 @@ function render() {
   renderProjects();
   renderPlanner();
   renderCommandCenter();
+  renderBackupReminder();
 }
 
 function renderHeader() {
@@ -650,8 +654,55 @@ function addProject() {
   render();
 }
 
+function renderBackupReminder() {
+  if (!els.backupReminder) return;
+  const info = getBackupReminderInfo();
+  els.backupReminder.hidden = !info.shouldShow;
+  els.backupReminder.textContent = info.message;
+}
+
+function getBackupReminderInfo() {
+  const noteCount = state.notes.length;
+  if (noteCount < BACKUP_REMINDER_INTERVAL) {
+    return { shouldShow: false, message: "" };
+  }
+
+  const last = readBackupReminder();
+  const lastCount = Number(last?.count || 0);
+  const added = noteCount - lastCount;
+  if (!last || added >= BACKUP_REMINDER_INTERVAL) {
+    return {
+      shouldShow: true,
+      message: `기록이 ${noteCount}개 쌓였습니다. JSON 백업을 내려받아 안전하게 보관해 주세요.`,
+    };
+  }
+
+  return { shouldShow: false, message: "" };
+}
+
+function readBackupReminder() {
+  try {
+    return JSON.parse(localStorage.getItem(BACKUP_REMINDER_KEY) || "null");
+  } catch (error) {
+    console.warn(error);
+    return null;
+  }
+}
+
+function markBackupCompleted() {
+  try {
+    localStorage.setItem(BACKUP_REMINDER_KEY, JSON.stringify({
+      at: new Date().toISOString(),
+      count: state.notes.length,
+    }));
+  } catch (error) {
+    console.warn(error);
+  }
+}
 function downloadJsonBackup() {
   downloadFile(`voice-os-backup-${toDateKey(new Date())}.json`, JSON.stringify(state, null, 2), "application/json");
+  markBackupCompleted();
+  renderBackupReminder();
 }
 
 function downloadTextBackup() {
