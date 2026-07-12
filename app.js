@@ -177,7 +177,7 @@ function bindEvents() {
     render();
   });
 
-  els.exportButton.addEventListener("click", openPromptDialog);
+  els.exportButton.addEventListener("click", () => openPromptDialog());
   if (els.commandPacketButton) {
     els.commandPacketButton.addEventListener("click", () => openPromptDialog("all", getCommandCenterNotes()));
   }
