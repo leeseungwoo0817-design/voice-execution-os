@@ -20,6 +20,7 @@
         <nav class="nav-tabs" aria-label="화면 이동">
           <button class="nav-tab active" data-view="today">오늘</button>
           <button class="nav-tab" data-view="command">실행센터</button>
+          <button class="nav-tab" data-view="meeting">AI 회의실</button>
           <button class="nav-tab" data-view="calendar">캘린더</button>
           <button class="nav-tab" data-view="inbox">기록함</button>
           <button class="nav-tab" data-view="projects">프로젝트</button>
@@ -130,6 +131,37 @@
           <div class="command-board" id="commandBoard"></div>
         </section>
 
+        <section class="view-section" id="view-meeting">
+          <div class="section-heading">
+            <div>
+              <h2>AI 회의실</h2>
+              <p class="section-note">여러 AI 포지션에 전달할 안건과 인계 내용을 한곳에서 정리합니다.</p>
+            </div>
+          </div>
+
+          <div class="draft-area">
+            <label for="meetingAgendaInput">회의 안건</label>
+            <textarea id="meetingAgendaInput" placeholder="예: Voice OS 실행대기열을 AI별 인계 패킷으로 정리하고 싶습니다."></textarea>
+            <div class="draft-controls">
+              <select id="meetingModeSelect" aria-label="회의 모드 선택">
+                <option value="lite">Lite - 단순 확인</option>
+                <option value="full">Full - 구조 검토</option>
+                <option value="emergency">Emergency - 장애 대응</option>
+              </select>
+              <select id="meetingAudienceSelect" aria-label="전달 대상 선택">
+                <option value="all">전체 회의실</option>
+                <option value="management">경영실장</option>
+                <option value="pmo">관리실장</option>
+                <option value="codex">기술실장</option>
+                <option value="content">콘텐츠본부장</option>
+                <option value="designer">연구소디자이너</option>
+              </select>
+              <button class="ghost-button" id="meetingPacketButton" type="button">인계 패킷 만들기</button>
+            </div>
+          </div>
+
+          <div class="empty-state">회의 안건을 입력하고 인계 패킷 만들기를 누르면 AI 전달용 지시문이 생성됩니다.</div>
+        </section>
         <section class="view-section active" id="view-today">
           <div class="section-heading">
             <h2>오늘 타임라인</h2>

@@ -42,6 +42,21 @@ const statusLabels = {
   done: "완료",
 };
 
+const meetingModeLabels = {
+  lite: "Lite - 단순 확인",
+  full: "Full - 구조 검토",
+  emergency: "Emergency - 장애 대응",
+};
+
+const meetingAudienceLabels = {
+  all: "전체 회의실",
+  management: "경영실장",
+  pmo: "관리실장",
+  codex: "기술실장",
+  content: "콘텐츠본부장",
+  designer: "연구소디자이너",
+};
+
 const targetOrder = ["codex", "gpt", "calendar", "daily", "archive"];
 const statusOrder = ["today", "progress", "pending", "hold", "done"];
 
@@ -81,6 +96,10 @@ const els = {
   dateFilter: $("dateFilter"),
   todayTimeline: $("todayTimeline"),
   commandPacketButton: $("commandPacketButton"),
+  meetingAgendaInput: $("meetingAgendaInput"),
+  meetingModeSelect: $("meetingModeSelect"),
+  meetingAudienceSelect: $("meetingAudienceSelect"),
+  meetingPacketButton: $("meetingPacketButton"),
   commandFocusTitle: $("commandFocusTitle"),
   commandFocusText: $("commandFocusText"),
   commandBoard: $("commandBoard"),
@@ -183,6 +202,10 @@ function bindEvents() {
   els.exportButton.addEventListener("click", () => openPromptDialog());
   if (els.commandPacketButton) {
     els.commandPacketButton.addEventListener("click", () => openPromptDialog("all", getCommandCenterNotes()));
+  }
+
+  if (els.meetingPacketButton) {
+    els.meetingPacketButton.addEventListener("click", openMeetingPacketDialog);
   }
   els.closePromptButton.addEventListener("click", () => els.promptDialog.close());
   els.copyPromptButton.addEventListener("click", copyPrompt);
@@ -625,6 +648,103 @@ function buildPrompt(target, notes) {
   }
 
   return lines.join("\n");
+}
+async function openMeetingPacketDialog() {
+  els.promptOutput.value = buildMeetingPacket();
+  els.promptDialog.showModal();
+}
+
+function buildMeetingPacket() {
+  const agenda = (els.meetingAgendaInput?.value || "").trim() || "(회의 안건 미입력)";
+  const mode = els.meetingModeSelect?.value || "lite";
+  const audience = els.meetingAudienceSelect?.value || "all";
+  const notes = sortExecutionNotes(getCommandCenterNotes());
+  const counts = getStatusCounts();
+  const noteLines = formatMeetingNoteLines(notes);
+  const modeGuide = getMeetingModeGuide(mode);
+  const audienceGuide = getMeetingAudienceGuide(audience);
+
+  return [
+    "[Voice OS AI 회의실 인계 패킷]",
+    "",
+    `생성 시각: ${new Date().toLocaleString("ko-KR")}`,
+    `회의 모드: ${meetingModeLabels[mode] || mode}`,
+    `전달 대상: ${meetingAudienceLabels[audience] || audience}`,
+    "",
+    "[회의 안건]",
+    agenda,
+    "",
+    "[회의 방식]",
+    modeGuide,
+    "",
+    "[전달 대상별 검토 기준]",
+    audienceGuide,
+    "",
+    "[현재 실행대기 요약]",
+    `오늘 마무리: ${counts.today}개`,
+    `진행중: ${counts.progress}개`,
+    `대기: ${counts.pending}개`,
+    `보류: ${counts.hold}개`,
+    `완료: ${counts.done}개`,
+    "",
+    "[참고 실행대기 항목]",
+    noteLines.length ? noteLines.join("\n") : "현재 전달할 실행대기 항목이 없습니다.",
+    "",
+    "[요청]",
+    "1. 위 안건을 기준으로 이미 합의된 기준과 충돌하는지 먼저 확인해 주세요.",
+    "2. 새 문서나 새 기능을 만들기 전에 기존 Voice OS 구조와 재사용 가능한 자산을 먼저 확인해 주세요.",
+    "3. 결론은 설명이 아니라 실행 가능한 액션아이템으로 정리해 주세요.",
+    "",
+    "[출력 형식]",
+    "- 확인된 사실:",
+    "- 판단:",
+    "- 필요한 작업:",
+    "- 담당:",
+    "- 다음 액션:",
+    "- 대표 승인 필요 여부:",
+  ].join("\n");
+}
+
+function getMeetingModeGuide(mode) {
+  const guides = {
+    lite: "단순 확인 또는 경미한 수정 안건입니다. 결론만 짧게 정리하고, 불필요한 추가 회의는 만들지 않습니다.",
+    full: "구조, 우선순위, 운영 방식 변경 가능성이 있는 안건입니다. 독립 의견, 교차 검토, 관리실장 종합, 대표 승인 흐름을 기준으로 검토합니다.",
+    emergency: "장애, 배포 실패, 데이터 손실 가능성이 있는 긴급 안건입니다. 자산 대조보다 원인 파악과 복구 조치를 우선하고, 종료 후 회고를 남깁니다.",
+  };
+  return guides[mode] || guides.lite;
+}
+
+function getMeetingAudienceGuide(audience) {
+  const guides = {
+    all: [
+      "경영실장: 전략, 우선순위, 대표 시간 보호 관점에서 검토합니다.",
+      "관리실장: 중복, 실현가능성, 기존 자산과의 충돌 여부를 검토합니다.",
+      "기술실장: 구현 난이도, 영향 범위, 배포 안정성을 검토합니다.",
+      "콘텐츠/디자인: 콘텐츠 품질, 브랜드 일관성, 산출물 형태를 검토합니다.",
+    ],
+    management: ["전략 방향, 우선순위, 대표 의사결정 부담 감소 여부를 중심으로 검토합니다."],
+    pmo: ["기존 자산 중복, 회의 필요성, 역할별 인계 가능성, 누락 위험을 중심으로 검토합니다."],
+    codex: ["기존 코드 구조, 최소 수정 가능성, 영향 범위, 테스트 방법을 중심으로 검토합니다."],
+    content: ["콘텐츠 목적, 독자 흐름, 발행패키지 기준, 운영원칙 일치 여부를 중심으로 검토합니다."],
+    designer: ["브랜드 자산, 루키/루나 역할, 이미지 산출물 형태, 모바일 가독성을 중심으로 검토합니다."],
+  };
+  return (guides[audience] || guides.all).map((line) => `- ${line}`).join("\n");
+}
+
+function formatMeetingNoteLines(notes) {
+  return notes.slice(0, 10).map((note, index) => {
+    const project = state.projects.find((item) => item.id === note.projectId)?.name || "미지정";
+    return `${index + 1}. [${statusLabels[note.status] || note.status}] ${note.text} / 대상: ${targetLabels[note.target] || note.target} / 프로젝트: ${project}`;
+  });
+}
+function getStatusCounts() {
+  return state.notes.reduce(
+    (acc, note) => {
+      if (acc[note.status] !== undefined) acc[note.status] += 1;
+      return acc;
+    },
+    { today: 0, progress: 0, pending: 0, hold: 0, done: 0 }
+  );
 }
 async function copyPrompt() {
   await navigator.clipboard.writeText(els.promptOutput.value);
