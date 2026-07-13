@@ -280,11 +280,31 @@ async function saveAudioNote(blob) {
     console.warn(error);
   }
 
+  if (activeView === "meeting") {
+    if (transcript?.trim()) {
+      appendMeetingAgenda(transcript.trim());
+      els.recordStatus.textContent = "회의 안건에 음성 내용이 입력되었습니다.";
+      return;
+    }
+
+    addNote({ text: "회의 안건 음성 변환에 실패했습니다. 재생해서 내용을 확인하세요.", audioUrl });
+    els.recordStatus.textContent = `회의 안건 변환은 실패했고, 음성은 기록함에 저장했습니다. ${transcriptError}`;
+    return;
+  }
+
   const text = transcript?.trim() || "음성 메모가 저장되었습니다. 재생해서 내용을 확인하세요.";
   addNote({ text, audioUrl });
   els.recordStatus.textContent = transcript
     ? "음성 기록이 실행 대기열에 저장되었습니다."
     : `음성은 저장됐지만 텍스트 변환은 실패했습니다. ${transcriptError}`;
+}
+
+function appendMeetingAgenda(text) {
+  if (!els.meetingAgendaInput) return;
+
+  const current = els.meetingAgendaInput.value.trim();
+  els.meetingAgendaInput.value = current ? `${current}\n${text}` : text;
+  els.meetingAgendaInput.focus();
 }
 
 async function transcribeAudio(audioDataUrl) {
