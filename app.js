@@ -69,6 +69,7 @@ let startedAt = 0;
 let selectedDate = toDateKey(new Date());
 let visibleMonth = new Date();
 let activeView = "today";
+let promptCopyButtonLabel = "지시문 복사";
 
 const $ = (id) => document.getElementById(id);
 
@@ -613,9 +614,21 @@ function bindNoteActions(container) {
 }
 
 function openPromptDialog(target = els.promptMode.value, notesOverride = null) {
+  setPromptDialogMeta(
+    "코덱스/GPT에게 보낼 지시문",
+    "아래 내용을 복사해서 코덱스, GPT, 관리실장에게 붙여넣으면 됩니다.",
+    "지시문 복사"
+  );
   const notes = notesOverride || getPromptNotes(target);
   els.promptOutput.value = buildPrompt(target, notes);
   els.promptDialog.showModal();
+}
+
+function setPromptDialogMeta(title, helpText, copyLabel) {
+  promptCopyButtonLabel = copyLabel;
+  if (els.promptDialogTitle) els.promptDialogTitle.textContent = title;
+  if (els.promptDialogHelp) els.promptDialogHelp.textContent = helpText;
+  if (els.copyPromptButton) els.copyPromptButton.textContent = copyLabel;
 }
 
 function getPromptNotes(target) {
@@ -670,8 +683,18 @@ function buildPrompt(target, notes) {
   return lines.join("\n");
 }
 async function openMeetingPacketDialog() {
+  setPromptDialogMeta("AI 회의실 인계 패킷", getMeetingNextStepGuide(), "인계 패킷 복사");
   els.promptOutput.value = buildMeetingPacket();
   els.promptDialog.showModal();
+}
+
+function getMeetingNextStepGuide() {
+  const audience = els.meetingAudienceSelect?.value || "all";
+  const targetName = meetingAudienceLabels[audience] || "선택한 AI";
+  if (audience === "all") {
+    return "다음 처리: 1) 인계 패킷 복사 2) 관리실장에게 먼저 붙여넣기 3) 관리실장이 경영실장·기술실장·콘텐츠/디자인 검토 순서를 잡게 하기 4) 회신 결과를 Voice OS 기록으로 다시 저장하세요.";
+  }
+  return `다음 처리: 1) 인계 패킷 복사 2) ${targetName} 채팅창에 붙여넣기 3) 받은 답변을 Voice OS 기록 또는 회의 안건으로 다시 저장하세요.`;
 }
 
 function buildMeetingPacket() {
@@ -770,7 +793,7 @@ async function copyPrompt() {
   await navigator.clipboard.writeText(els.promptOutput.value);
   els.copyPromptButton.textContent = "복사 완료";
   setTimeout(() => {
-    els.copyPromptButton.textContent = "지시문 복사";
+    els.copyPromptButton.textContent = promptCopyButtonLabel;
   }, 1500);
 }
 

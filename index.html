@@ -244,10 +244,10 @@
     <dialog id="promptDialog">
       <div class="dialog-card">
         <div class="section-heading">
-          <h2>코덱스/GPT에게 보낼 지시문</h2>
+          <h2 id="promptDialogTitle">코덱스/GPT에게 보낼 지시문</h2>
           <button class="ghost-button" id="closePromptButton">닫기</button>
         </div>
-        <p class="dialog-help">아래 내용을 복사해서 코덱스, GPT, 관리실장에게 붙여넣으면 됩니다.</p>
+        <p class="dialog-help" id="promptDialogHelp">아래 내용을 복사해서 코덱스, GPT, 관리실장에게 붙여넣으면 됩니다.</p>
         <textarea id="promptOutput" readonly></textarea>
         <button class="primary-button" id="copyPromptButton">지시문 복사</button>
       </div>
