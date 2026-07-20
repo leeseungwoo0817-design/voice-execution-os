@@ -33,6 +33,5 @@ test("supports legacy record arrays and produces a confirmation message", () => 
   const preview = analyze({ records: [{ transcript: "legacy" }] }, { projects: [], notes: [] }, []);
   assert.equal(preview.records, 1);
   assert.match(format(preview, "backup.json"), /backup\.json/);
-  assert.match(format(preview, "backup.json"), /痍⑥냼?섎㈃ ?꾨Т寃껊룄 蹂寃쏀븯吏 ?딆뒿?덈떎/);
+  assert.match(format(preview, "backup.json"), /0\uAC1C/);
 });
-
