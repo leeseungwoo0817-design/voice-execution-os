@@ -17,8 +17,10 @@
 
   function isConvertibleNote(note) {
     if (!note || typeof note !== "object") return false;
-    return [note.text, note.transcript, note.content, note.memo, note.message, note.title, note.audioUrl, note.audio, note.audio_url, note.fileUrl]
-      .some((value) => typeof value === "string" && value.trim());
+    return [
+      note.text, note.transcript, note.content, note.memo, note.message,
+      note.title, note.audioUrl, note.audio, note.audio_url, note.fileUrl,
+    ].some((value) => typeof value === "string" && value.trim());
   }
 
   function containsBase64Audio(note) {
@@ -55,19 +57,18 @@
 
   function format(preview, fileName) {
     return [
-      "JSON 諛깆뾽 蹂묓빀 誘몃━蹂닿린",
-      `?뚯씪: ${fileName || "?대쫫 ?놁쓬"}`,
-      `?꾨줈?앺듃: ${preview.projects}媛?,
-      `諛깆뾽 湲곕줉: ${preview.records}媛?,
-      `異붽? ?덉젙: ${preview.additions}媛?,
-      `以묐났 ?쒖쇅: ${preview.duplicates}媛?,
-      `蹂??遺덇?: ${preview.invalid}媛?,
-      `base64 ?뚯꽦 ?ы븿: ${preview.base64Audio}媛?,
+      "JSON \uBC31\uC5C5 \uBCD1\uD569 \uBBF8\uB9AC\uBCF4\uAE30",
+      `\uD30C\uC77C: ${fileName || "\uC774\uB984 \uC5C6\uC74C"}`,
+      `\uD504\uB85C\uC81D\uD2B8: ${preview.projects}\uAC1C`,
+      `\uBC31\uC5C5 \uAE30\uB85D: ${preview.records}\uAC1C`,
+      `\uCD94\uAC00 \uC608\uC815: ${preview.additions}\uAC1C`,
+      `\uC911\uBCF5 \uC81C\uC678: ${preview.duplicates}\uAC1C`,
+      `\uBCC0\uD658 \uBD88\uAC00: ${preview.invalid}\uAC1C`,
+      `base64 \uC74C\uC131 \uD3EC\uD568: ${preview.base64Audio}\uAC1C`,
       "",
-      "?뺤씤???꾨Ⅴ硫?湲곗〈 濡쒖뺄 湲곕줉??蹂묓빀?⑸땲?? 痍⑥냼?섎㈃ ?꾨Т寃껊룄 蹂寃쏀븯吏 ?딆뒿?덈떎.",
+      "\uD655\uC778\uC744 \uB204\uB974\uBA74 \uAE30\uC874 \uB85C\uCEEC \uAE30\uB85D\uC5D0 \uBCD1\uD569\uD569\uB2C8\uB2E4. \uCDE8\uC18C\uD558\uBA74 \uC544\uBB34\uAC83\uB3C4 \uBCC0\uACBD\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
     ].join("\n");
   }
 
   return { analyze, format };
 });
-
