@@ -892,7 +892,19 @@ function importJsonBackup(event) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const imported = normalizeState(JSON.parse(reader.result));
+      const rawBackup = JSON.parse(reader.result);
+      const imported = normalizeState(rawBackup);
+      const previewApi = globalThis.VoiceOsBackupPreview;
+      if (!previewApi) throw new Error("백업 미리보기 모듈을 불러오지 못했습니다.");
+
+      const preview = previewApi.analyze(rawBackup, imported, state.notes);
+      const approved = confirm(previewApi.format(preview, file.name));
+      if (!approved) return;
+      if (preview.invalid > 0) {
+        alert(`변환 불가 기록이 ${preview.invalid}개 있어 병합하지 않았습니다. 백업 파일을 확인해 주세요.`);
+        return;
+      }
+
       const before = state.notes.length;
       const merged = mergeImportedState(imported);
       state.projects = merged.projects;
