@@ -48,9 +48,13 @@ exports.handler = async (event) => {
   if (!actor) return json(event, 401, { ok: false, error_code: "UNAUTHORIZED" });
 
   if (action === "snapshot" && event.httpMethod === "GET") {
-    const store = await openStore();
-    const snapshot = await store.get(SNAPSHOT_KEY, { type: "json", consistency: "strong" });
-    return json(event, 200, { ok: true, snapshot });
+    try {
+      const store = await openStore();
+      const snapshot = await store.get(SNAPSHOT_KEY, { type: "json", consistency: "strong" });
+      return json(event, 200, { ok: true, snapshot });
+    } catch (error) {
+      return storageError(event, error);
+    }
   }
 
   if (action === "snapshot" && event.httpMethod === "POST") {
@@ -65,11 +69,14 @@ exports.handler = async (event) => {
       await store.setJSON(`stage3-test/audit/${audit.id}`, audit);
       return json(event, 200, { ok: true, snapshot, audit });
     } catch (error) {
-      return json(event, error.code === "VALIDATION_ERROR" ? 400 : 500, {
-        ok: false,
-        error_code: error.code || "STORE_ERROR",
-        message: error.code === "VALIDATION_ERROR" ? error.message : "Test storage request failed.",
-      });
+      if (error.code === "VALIDATION_ERROR") {
+        return json(event, 400, {
+          ok: false,
+          error_code: error.code,
+          message: error.message,
+        });
+      }
+      return storageError(event, error);
     }
   }
 
@@ -137,6 +144,18 @@ function getHeader(event, name, lower = true) {
     }
   }
   return "";
+}
+
+function storageError(event, error) {
+  const errorType = String(error?.name || "Error").slice(0, 80);
+  const errorMessage = String(error?.message || "Unknown storage error").slice(0, 300);
+  console.error("AI_COS_STORAGE_ERROR", { errorType, errorMessage });
+  return json(event, 500, {
+    ok: false,
+    error_code: "STORE_ERROR",
+    error_type: errorType,
+    message: errorMessage,
+  });
 }
 
 function json(event, statusCode, body) {
