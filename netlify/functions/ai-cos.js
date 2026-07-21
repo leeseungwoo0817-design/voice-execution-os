@@ -49,7 +49,7 @@ exports.handler = async (event) => {
 
   if (action === "snapshot" && event.httpMethod === "GET") {
     try {
-      const store = await openStore();
+      const store = await openStore(event);
       const snapshot = await store.get(SNAPSHOT_KEY, { type: "json", consistency: "strong" });
       return json(event, 200, { ok: true, snapshot });
     } catch (error) {
@@ -64,7 +64,7 @@ exports.handler = async (event) => {
     try {
       const snapshot = normalizeTestSnapshot(body.value);
       const audit = buildAuditLog("save_test_snapshot", snapshot);
-      const store = await openStore();
+      const store = await openStore(event);
       await store.setJSON(SNAPSHOT_KEY, snapshot);
       await store.setJSON(`stage3-test/audit/${audit.id}`, audit);
       return json(event, 200, { ok: true, snapshot, audit });
@@ -83,8 +83,9 @@ exports.handler = async (event) => {
   return json(event, 405, { ok: false, error_code: "METHOD_NOT_ALLOWED" });
 };
 
-async function openStore() {
-  const { getStore } = await import("@netlify/blobs");
+async function openStore(event) {
+  const { connectLambda, getStore } = await import("@netlify/blobs");
+  connectLambda(event);
   return getStore({ name: STORE_NAME, consistency: "strong" });
 }
 
