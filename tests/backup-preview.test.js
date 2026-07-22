@@ -19,14 +19,42 @@ test("counts additions, duplicates, invalid records, and base64 audio", () => {
     ],
   };
 
-  assert.deepEqual(analyze(raw, normalized, current), {
-    projects: 1,
-    records: 3,
-    additions: 1,
-    duplicates: 1,
-    invalid: 1,
-    base64Audio: 1,
-  });
+  const preview = analyze(raw, normalized, current);
+  assert.equal(preview.projects, 1);
+  assert.equal(preview.records, 3);
+  assert.equal(preview.additions, 1);
+  assert.equal(preview.duplicates, 1);
+  assert.equal(preview.invalid, 1);
+  assert.equal(preview.base64Audio, 1);
+  assert.equal(preview.missingIds, 3);
+  assert.equal(preview.duplicateIds, 0);
+  assert.equal(preview.orphanProjectRefs, 0);
+  assert.ok(preview.estimatedCharacters > 0);
+});
+
+test("reports missing, duplicate, and orphaned legacy identifiers without writing data", () => {
+  const raw = {
+    projects: [{ id: "known", name: "Known" }],
+    notes: [
+      { id: "same", projectId: "known", text: "one" },
+      { id: "same", projectId: "missing", text: "two" },
+      { projectId: "known", text: "three" },
+    ],
+  };
+  const normalized = {
+    projects: [{ id: "known", name: "Known" }],
+    notes: raw.notes.map((note) => ({
+      ...note,
+      createdAt: "2026-07-22T00:00:00.000Z",
+      audioUrl: "",
+    })),
+  };
+
+  const preview = analyze(raw, normalized, []);
+  assert.equal(preview.missingIds, 1);
+  assert.equal(preview.duplicateIds, 1);
+  assert.equal(preview.orphanProjectRefs, 1);
+  assert.ok(preview.estimatedCharacters > 0);
 });
 
 test("supports legacy record arrays and produces a confirmation message", () => {
