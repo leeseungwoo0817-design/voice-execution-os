@@ -50,7 +50,7 @@ exports.handler = async (event) => {
   if (action === "snapshot" && event.httpMethod === "GET") {
     try {
       const store = await openStore(event);
-      const snapshot = await store.get(SNAPSHOT_KEY, { type: "json", consistency: "strong" });
+      const snapshot = await store.get(SNAPSHOT_KEY, { type: "json" });
       return json(event, 200, { ok: true, snapshot });
     } catch (error) {
       return storageError(event, error);
@@ -86,7 +86,7 @@ exports.handler = async (event) => {
 async function openStore(event) {
   const { connectLambda, getStore } = await import("@netlify/blobs");
   connectLambda(event);
-  return getStore({ name: STORE_NAME, consistency: "strong" });
+  return getStore(STORE_NAME);
 }
 
 function authenticate(event) {
