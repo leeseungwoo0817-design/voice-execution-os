@@ -4,9 +4,13 @@
   "private": true,
   "description": "Voice OS cloud deploy package for Netlify Functions.",
   "scripts": {
-    "check": "node --check app.js && node --check netlify/functions/transcribe.js && node --check netlify/functions/health.js"
+    "check": "node --check backup-preview.js && node --check central-store-preview.js && node --check app.js && node --check netlify/functions/transcribe.js && node --check netlify/functions/health.js && node --check netlify/functions/_shared/ai-cos-core.js && node --check netlify/functions/ai-cos.js",
+    "test": "node --test tests/*.test.js"
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "@netlify/blobs": "10.7.9"
   }
 }

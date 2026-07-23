@@ -122,6 +122,13 @@ const els = {
   downloadTextButton: $("downloadTextButton"),
   restoreBackupButton: $("restoreBackupButton"),
   restoreBackupInput: $("restoreBackupInput"),
+  centralStoreTrialButton: $("centralStoreTrialButton"),
+  centralStoreDialog: $("centralStoreDialog"),
+  centralStorePreview: $("centralStorePreview"),
+  centralStorePassword: $("centralStorePassword"),
+  centralStoreStatus: $("centralStoreStatus"),
+  startCentralStoreTrialButton: $("startCentralStoreTrialButton"),
+  closeCentralStoreDialogButton: $("closeCentralStoreDialogButton"),
   backupReminder: $("backupReminder"),
   promptDialog: $("promptDialog"),
   promptOutput: $("promptOutput"),
@@ -215,6 +222,11 @@ function bindEvents() {
   if (els.restoreBackupButton && els.restoreBackupInput) {
     els.restoreBackupButton.addEventListener("click", () => els.restoreBackupInput.click());
     els.restoreBackupInput.addEventListener("change", importJsonBackup);
+  }
+  if (els.centralStoreTrialButton) {
+    els.centralStoreTrialButton.addEventListener("click", openCentralStoreTrial);
+    els.startCentralStoreTrialButton.addEventListener("click", runCentralStoreTrial);
+    els.closeCentralStoreDialogButton.addEventListener("click", closeCentralStoreTrial);
   }
 }
 
@@ -862,6 +874,142 @@ function markBackupCompleted() {
     console.warn(error);
   }
 }
+
+function openCentralStoreTrial() {
+  try {
+    const api = globalThis.VoiceOsCentralStorePreview;
+    if (!api) throw new Error("중앙 저장소 미리보기 모듈을 불러오지 못했습니다.");
+    const { preview } = api.buildSnapshot(state);
+    els.centralStorePreview.textContent = [
+      `프로젝트: ${preview.projects}개`,
+      `VoiceCommand 후보: ${preview.voiceCommands}개`,
+      `Task 자동 생성: ${preview.tasks}개`,
+      `제외되는 음성: ${preview.audioExcluded}개`,
+      "",
+      "승인하면 운영 저장소가 아닌 stage3-test 저장소에만 시험 복사합니다.",
+    ].join("\n");
+    els.centralStoreStatus.textContent = "";
+    els.centralStorePassword.value = "";
+    els.centralStoreDialog.showModal();
+    els.centralStorePassword.focus();
+  } catch (error) {
+    alert(error.message || "시험 복사 미리보기를 만들지 못했습니다.");
+  }
+}
+
+function closeCentralStoreTrial() {
+  els.centralStorePassword.value = "";
+  els.centralStoreStatus.textContent = "";
+  els.centralStoreDialog.close();
+}
+
+async function runCentralStoreTrial() {
+  const password = els.centralStorePassword.value;
+  if (!password) {
+    els.centralStoreStatus.textContent = "테스트 비밀번호를 입력해 주세요.";
+    return;
+  }
+
+  const api = globalThis.VoiceOsCentralStorePreview;
+  const base = "/.netlify/functions/ai-cos";
+  let token = "";
+  let rollbackRequired = false;
+  let beforeSnapshot = null;
+  els.startCentralStoreTrialButton.disabled = true;
+  els.centralStoreStatus.textContent = "백업, 시험 복사, 재대조 및 원상복구 중... 최대 약 2분이 걸립니다.";
+
+  try {
+    const { snapshot } = api.buildSnapshot(state);
+    const loginResponse = await fetch(`${base}?action=login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const login = await loginResponse.json();
+    if (!loginResponse.ok || !login.token) {
+      throw new Error(login.error_code === "INVALID_CREDENTIALS"
+        ? "비밀번호가 일치하지 않습니다."
+        : "인증에 실패했습니다.");
+    }
+    token = login.token;
+
+    const readHeaders = { Authorization: `Bearer ${token}` };
+    const writeHeaders = { ...readHeaders, "Content-Type": "application/json" };
+    const beforeResponse = await fetch(`${base}?action=snapshot`, { headers: readHeaders });
+    const before = await beforeResponse.json();
+    if (!beforeResponse.ok || !before.ok) throw new Error("기존 시험 데이터를 백업 전에 읽지 못했습니다.");
+    beforeSnapshot = before.snapshot;
+
+    const saveResponse = await fetch(`${base}?action=snapshot`, {
+      method: "POST",
+      headers: writeHeaders,
+      body: JSON.stringify(snapshot),
+    });
+    const saved = await saveResponse.json();
+    if (!saveResponse.ok || !saved.ok || !saved.backup_created) {
+      throw new Error("시험 복사 또는 자동 백업에 실패했습니다.");
+    }
+    rollbackRequired = true;
+
+    await new Promise((resolve) => setTimeout(resolve, 65000));
+    const readResponse = await fetch(`${base}?action=snapshot`, { headers: readHeaders });
+    const read = await readResponse.json();
+    if (!readResponse.ok || !read.ok) throw new Error("시험 복사 결과를 다시 읽지 못했습니다.");
+
+    const compared = api.compareSnapshots(snapshot, read.snapshot);
+    if (!compared.projectsMatch || !compared.voiceCommandsMatch || !compared.tasksMatch) {
+      throw new Error("원본과 시험 복사본의 건수 또는 ID가 일치하지 않습니다.");
+    }
+
+    const rollbackResponse = await fetch(`${base}?action=rollback`, {
+      method: "POST",
+      headers: writeHeaders,
+      body: "{}",
+    });
+    const rollback = await rollbackResponse.json();
+    if (!rollbackResponse.ok || !rollback.ok) throw new Error("시험 복사 후 원상복구에 실패했습니다.");
+    rollbackRequired = false;
+
+    await new Promise((resolve) => setTimeout(resolve, 65000));
+    const restoredResponse = await fetch(`${base}?action=snapshot`, { headers: readHeaders });
+    const restored = await restoredResponse.json();
+    if (!restoredResponse.ok || !restored.ok) throw new Error("원상복구 결과를 다시 읽지 못했습니다.");
+
+    const restoredComparison = api.compareSnapshots(beforeSnapshot, restored.snapshot);
+    if (!restoredComparison.projectsMatch
+      || !restoredComparison.voiceCommandsMatch
+      || !restoredComparison.tasksMatch) {
+      throw new Error("원상복구 전후의 건수 또는 ID가 일치하지 않습니다.");
+    }
+
+    els.centralStoreStatus.textContent = "시험 복사, 재대조 및 원상복구가 완료되었습니다.";
+  } catch (error) {
+    els.centralStoreStatus.textContent = error.message || "시험 복사 중 오류가 발생했습니다.";
+  } finally {
+    if (rollbackRequired && token) {
+      try {
+        const emergencyResponse = await fetch(`${base}?action=rollback`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: "{}",
+        });
+        if (emergencyResponse.ok) {
+          els.centralStoreStatus.textContent += " 자동 원상복구는 완료되었습니다.";
+        } else {
+          els.centralStoreStatus.textContent += " 자동 원상복구도 실패해 기술 확인이 필요합니다.";
+        }
+      } catch {
+        els.centralStoreStatus.textContent += " 자동 원상복구도 실패해 기술 확인이 필요합니다.";
+      }
+    }
+    els.centralStorePassword.value = "";
+    els.startCentralStoreTrialButton.disabled = false;
+  }
+}
+
 function downloadJsonBackup() {
   downloadFile(`voice-os-backup-${toDateKey(new Date())}.json`, JSON.stringify(state, null, 2), "application/json");
   markBackupCompleted();
@@ -892,7 +1040,19 @@ function importJsonBackup(event) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const imported = normalizeState(JSON.parse(reader.result));
+      const rawBackup = JSON.parse(reader.result);
+      const imported = normalizeState(rawBackup);
+      const previewApi = globalThis.VoiceOsBackupPreview;
+      if (!previewApi) throw new Error("백업 미리보기 모듈을 불러오지 못했습니다.");
+
+      const preview = previewApi.analyze(rawBackup, imported, state.notes);
+      const approved = confirm(previewApi.format(preview, file.name));
+      if (!approved) return;
+      if (preview.invalid > 0) {
+        alert(`변환 불가 기록이 ${preview.invalid}개 있어 병합하지 않았습니다. 백업 파일을 확인해 주세요.`);
+        return;
+      }
+
       const before = state.notes.length;
       const merged = mergeImportedState(imported);
       state.projects = merged.projects;
