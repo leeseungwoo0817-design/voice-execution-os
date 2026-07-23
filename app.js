@@ -916,7 +916,7 @@ async function runCentralStoreTrial() {
   let rollbackRequired = false;
   let beforeSnapshot = null;
   els.startCentralStoreTrialButton.disabled = true;
-  els.centralStoreStatus.textContent = "백업, 시험 복사, 재대조 및 원상복구 중...";
+  els.centralStoreStatus.textContent = "백업, 시험 복사, 재대조 및 원상복구 중... 최대 약 2분이 걸립니다.";
 
   try {
     const { snapshot } = api.buildSnapshot(state);
@@ -951,7 +951,7 @@ async function runCentralStoreTrial() {
     }
     rollbackRequired = true;
 
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    await new Promise((resolve) => setTimeout(resolve, 65000));
     const readResponse = await fetch(`${base}?action=snapshot`, { headers: readHeaders });
     const read = await readResponse.json();
     if (!readResponse.ok || !read.ok) throw new Error("시험 복사 결과를 다시 읽지 못했습니다.");
@@ -970,7 +970,7 @@ async function runCentralStoreTrial() {
     if (!rollbackResponse.ok || !rollback.ok) throw new Error("시험 복사 후 원상복구에 실패했습니다.");
     rollbackRequired = false;
 
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    await new Promise((resolve) => setTimeout(resolve, 65000));
     const restoredResponse = await fetch(`${base}?action=snapshot`, { headers: readHeaders });
     const restored = await restoredResponse.json();
     if (!restoredResponse.ok || !restored.ok) throw new Error("원상복구 결과를 다시 읽지 못했습니다.");
