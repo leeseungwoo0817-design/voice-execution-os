@@ -912,8 +912,11 @@ async function runCentralStoreTrial() {
 
   const api = globalThis.VoiceOsCentralStorePreview;
   const base = "/.netlify/functions/ai-cos";
+  let token = "";
+  let rollbackRequired = false;
+  let beforeSnapshot = null;
   els.startCentralStoreTrialButton.disabled = true;
-  els.centralStoreStatus.textContent = "시험 복사 및 재대조 중...";
+  els.centralStoreStatus.textContent = "백업, 시험 복사, 재대조 및 원상복구 중...";
 
   try {
     const { snapshot } = api.buildSnapshot(state);
@@ -928,35 +931,80 @@ async function runCentralStoreTrial() {
         ? "비밀번호가 일치하지 않습니다."
         : "인증에 실패했습니다.");
     }
+    token = login.token;
 
-    const headers = {
-      Authorization: `Bearer ${login.token}`,
-      "Content-Type": "application/json",
-    };
+    const readHeaders = { Authorization: `Bearer ${token}` };
+    const writeHeaders = { ...readHeaders, "Content-Type": "application/json" };
+    const beforeResponse = await fetch(`${base}?action=snapshot`, { headers: readHeaders });
+    const before = await beforeResponse.json();
+    if (!beforeResponse.ok || !before.ok) throw new Error("기존 시험 데이터를 백업 전에 읽지 못했습니다.");
+    beforeSnapshot = before.snapshot;
+
     const saveResponse = await fetch(`${base}?action=snapshot`, {
       method: "POST",
-      headers,
+      headers: writeHeaders,
       body: JSON.stringify(snapshot),
     });
     const saved = await saveResponse.json();
-    if (!saveResponse.ok || !saved.ok) throw new Error("시험 복사에 실패했습니다.");
+    if (!saveResponse.ok || !saved.ok || !saved.backup_created) {
+      throw new Error("시험 복사 또는 자동 백업에 실패했습니다.");
+    }
+    rollbackRequired = true;
 
     await new Promise((resolve) => setTimeout(resolve, 5000));
-    const readResponse = await fetch(`${base}?action=snapshot`, {
-      headers: { Authorization: `Bearer ${login.token}` },
-    });
+    const readResponse = await fetch(`${base}?action=snapshot`, { headers: readHeaders });
     const read = await readResponse.json();
     if (!readResponse.ok || !read.ok) throw new Error("시험 복사 결과를 다시 읽지 못했습니다.");
 
     const compared = api.compareSnapshots(snapshot, read.snapshot);
     if (!compared.projectsMatch || !compared.voiceCommandsMatch || !compared.tasksMatch) {
-      throw new Error("원본과 시험 복사본의 건수가 일치하지 않습니다.");
+      throw new Error("원본과 시험 복사본의 건수 또는 ID가 일치하지 않습니다.");
     }
 
-    els.centralStoreStatus.textContent = "시험 복사와 재대조가 완료되었습니다.";
+    const rollbackResponse = await fetch(`${base}?action=rollback`, {
+      method: "POST",
+      headers: writeHeaders,
+      body: "{}",
+    });
+    const rollback = await rollbackResponse.json();
+    if (!rollbackResponse.ok || !rollback.ok) throw new Error("시험 복사 후 원상복구에 실패했습니다.");
+    rollbackRequired = false;
+
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+    const restoredResponse = await fetch(`${base}?action=snapshot`, { headers: readHeaders });
+    const restored = await restoredResponse.json();
+    if (!restoredResponse.ok || !restored.ok) throw new Error("원상복구 결과를 다시 읽지 못했습니다.");
+
+    const restoredComparison = api.compareSnapshots(beforeSnapshot, restored.snapshot);
+    if (!restoredComparison.projectsMatch
+      || !restoredComparison.voiceCommandsMatch
+      || !restoredComparison.tasksMatch) {
+      throw new Error("원상복구 전후의 건수 또는 ID가 일치하지 않습니다.");
+    }
+
+    els.centralStoreStatus.textContent = "시험 복사, 재대조 및 원상복구가 완료되었습니다.";
   } catch (error) {
     els.centralStoreStatus.textContent = error.message || "시험 복사 중 오류가 발생했습니다.";
   } finally {
+    if (rollbackRequired && token) {
+      try {
+        const emergencyResponse = await fetch(`${base}?action=rollback`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: "{}",
+        });
+        if (emergencyResponse.ok) {
+          els.centralStoreStatus.textContent += " 자동 원상복구는 완료되었습니다.";
+        } else {
+          els.centralStoreStatus.textContent += " 자동 원상복구도 실패해 기술 확인이 필요합니다.";
+        }
+      } catch {
+        els.centralStoreStatus.textContent += " 자동 원상복구도 실패해 기술 확인이 필요합니다.";
+      }
+    }
     els.centralStorePassword.value = "";
     els.startCentralStoreTrialButton.disabled = false;
   }
