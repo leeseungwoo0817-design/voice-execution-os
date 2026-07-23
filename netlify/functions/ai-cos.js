@@ -52,7 +52,7 @@ exports.handler = async (event) => {
   if (action === "snapshot" && event.httpMethod === "GET") {
     try {
       const store = await openStore(event);
-      const snapshot = await store.get(SNAPSHOT_KEY, { type: "json", consistency: "strong" });
+      const snapshot = await store.get(SNAPSHOT_KEY, { type: "json" });
       return json(event, 200, { ok: true, snapshot });
     } catch (error) {
       return storageError(event, error);
@@ -67,7 +67,7 @@ exports.handler = async (event) => {
       const snapshot = normalizeTestSnapshot(body.value);
       const audit = buildAuditLog("save_test_snapshot", snapshot);
       const store = await openStore(event);
-      const existing = await store.get(SNAPSHOT_KEY, { type: "json", consistency: "strong" });
+      const existing = await store.get(SNAPSHOT_KEY, { type: "json" });
       const backup = {
         exists: Boolean(existing),
         snapshot: existing || null,
@@ -92,7 +92,7 @@ exports.handler = async (event) => {
   if (action === "rollback" && event.httpMethod === "POST") {
     try {
       const store = await openStore(event);
-      const backup = await store.get(BACKUP_KEY, { type: "json", consistency: "strong" });
+      const backup = await store.get(BACKUP_KEY, { type: "json" });
       if (!backup || typeof backup.exists !== "boolean") {
         return json(event, 404, { ok: false, error_code: "BACKUP_NOT_FOUND" });
       }
