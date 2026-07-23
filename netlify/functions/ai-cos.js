@@ -8,6 +8,7 @@ const {
 
 const STORE_NAME = "voice-os-stage3-test";
 const SNAPSHOT_KEY = "stage3-test/snapshots/current";
+const BACKUP_KEY = "stage3-test/backups/before-trial";
 
 exports.handler = async (event) => {
   const headers = headersFor(event);
@@ -65,9 +66,16 @@ exports.handler = async (event) => {
       const snapshot = normalizeTestSnapshot(body.value);
       const audit = buildAuditLog("save_test_snapshot", snapshot);
       const store = await openStore(event);
+      const existing = await store.get(SNAPSHOT_KEY, { type: "json" });
+      const backup = {
+        exists: Boolean(existing),
+        snapshot: existing || null,
+        created_at: new Date().toISOString(),
+      };
+      await store.setJSON(BACKUP_KEY, backup);
       await store.setJSON(SNAPSHOT_KEY, snapshot);
       await store.setJSON(`stage3-test/audit/${audit.id}`, audit);
-      return json(event, 200, { ok: true, snapshot, audit });
+      return json(event, 200, { ok: true, snapshot, audit, backup_created: true });
     } catch (error) {
       if (error.code === "VALIDATION_ERROR") {
         return json(event, 400, {
@@ -76,6 +84,34 @@ exports.handler = async (event) => {
           message: error.message,
         });
       }
+      return storageError(event, error);
+    }
+  }
+
+  if (action === "rollback" && event.httpMethod === "POST") {
+    try {
+      const store = await openStore(event);
+      const backup = await store.get(BACKUP_KEY, { type: "json" });
+      if (!backup || typeof backup.exists !== "boolean") {
+        return json(event, 404, { ok: false, error_code: "BACKUP_NOT_FOUND" });
+      }
+
+      if (backup.exists) await store.setJSON(SNAPSHOT_KEY, backup.snapshot);
+      else await store.delete(SNAPSHOT_KEY);
+
+      const restored = backup.exists
+        ? backup.snapshot
+        : { projects: [], voice_commands: [], tasks: [] };
+      const audit = buildAuditLog("rollback_test_snapshot", restored);
+      await store.setJSON(`stage3-test/audit/${audit.id}`, audit);
+      await store.delete(BACKUP_KEY);
+      return json(event, 200, {
+        ok: true,
+        restored_existing_snapshot: backup.exists,
+        snapshot: backup.snapshot,
+        audit,
+      });
+    } catch (error) {
       return storageError(event, error);
     }
   }
