@@ -123,7 +123,7 @@ exports.handler = async (event) => {
 async function openStore(event) {
   const { connectLambda, getStore } = await import("@netlify/blobs");
   connectLambda(event);
-  return getStore(STORE_NAME);
+  return getStore({ name: STORE_NAME, consistency: "strong" });
 }
 
 function authenticate(event) {
