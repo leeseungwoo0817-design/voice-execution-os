@@ -9,6 +9,7 @@ const {
 const STORE_NAME = "voice-os-stage3-test";
 const SNAPSHOT_KEY = "stage3-test/snapshots/current";
 const BACKUP_KEY = "stage3-test/backups/before-trial";
+const DEPLOY_PREVIEW_ORIGIN_PATTERN = /^https:\/\/deploy-preview-\\d+--voice-execution-os\\.netlify\\.app$/;
 
 exports.handler = async (event) => {
   const headers = headersFor(event);
@@ -151,20 +152,24 @@ function allowedOrigins() {
     "https://voice-execution-os.netlify.app",
     process.env.URL,
     process.env.DEPLOY_PRIME_URL,
+    process.env.DEPLOY_URL,
   ].filter(Boolean));
+}
+
+function isAllowedOriginValue(origin) {
+  return allowedOrigins().has(origin) || DEPLOY_PREVIEW_ORIGIN_PATTERN.test(origin);
 }
 
 function isAllowedOrigin(event) {
   const origin = getHeader(event, "origin", false);
-  return !origin || allowedOrigins().has(origin);
+  return !origin || isAllowedOriginValue(origin);
 }
 
 function headersFor(event) {
   const origin = getHeader(event, "origin", false);
-  const allowed = allowedOrigins();
   return {
     "Content-Type": "application/json; charset=utf-8",
-    "Access-Control-Allow-Origin": allowed.has(origin) ? origin : "https://voice-execution-os.netlify.app",
+    "Access-Control-Allow-Origin": isAllowedOriginValue(origin) ? origin : "https://voice-execution-os.netlify.app",
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Cache-Control": "no-store",
