@@ -9,7 +9,7 @@ const {
 const STORE_NAME = "voice-os-stage3-test";
 const SNAPSHOT_KEY = "stage3-test/snapshots/current";
 const BACKUP_KEY = "stage3-test/backups/before-trial";
-const DEPLOY_PREVIEW_ORIGIN_PATTERN = /^https:\/\/deploy-preview-\\d+--voice-execution-os\\.netlify\\.app$/;
+const DEPLOY_PREVIEW_ORIGIN_PATTERN = /^https:\/\/deploy-preview-\d+--voice-execution-os\.netlify\.app$/;
 
 exports.handler = async (event) => {
   const headers = headersFor(event);
